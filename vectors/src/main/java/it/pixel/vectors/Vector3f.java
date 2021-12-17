@@ -1,4 +1,4 @@
-package model;
+package it.pixel.vectors;
 
 import java.io.Serializable;
 
