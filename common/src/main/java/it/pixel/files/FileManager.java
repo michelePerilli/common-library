@@ -4,7 +4,12 @@ import java.io.*;
 import java.util.ArrayList;
 import java.util.List;
 
-public class FileManager {
+/**
+ * The type File manager.
+ *
+ * @param <T> the type parameter
+ */
+public class FileManager<T> {
 
     /**
      * The type Append object output stream.
@@ -34,19 +39,25 @@ public class FileManager {
         }
     }
 
+    private final String filename;
+
+    /**
+     * Instantiates a new File manager.
+     *
+     * @param filePath the file path
+     */
+    public FileManager(String filePath){
+        this.filename = filePath;
+    }
+
     /**
      * Is first time boolean.
      *
      * @param file the file
      * @return the boolean
-     * @throws IOException the io exception
      */
-    private static boolean isFirstTime(String file) throws IOException {
-        if (new File(file).exists()) {
-            return getFileReader(file).available() == 0;
-        } else {
-            return true;
-        }
+    private static boolean isFirstTime(String file) {
+        return new File(file).length() == 0;
     }
 
     /**
@@ -79,37 +90,41 @@ public class FileManager {
     /**
      * Save to log file the line
      *
-     * @param file the path
-     * @param obj  the line to log to file
+     * @param obj the line to log to file
      * @throws IOException the io exception
      */
-    public static void writeLine(String file, Object obj) throws IOException {
-        ObjectOutputStream writer = getFileWriter(file);
+    public void write(T obj) throws IOException {
+        ObjectOutputStream writer = getFileWriter(filename);
         writer.writeObject(obj);
         writer.close();
     }
 
+
     /**
      * Read file list.
      *
-     * @param filename the filename
      * @return the list
-     * @throws ClassNotFoundException the class not found exception
-     * @throws IOException            the io exception
+     * @throws Exception the exception
      */
-    public static List<Object> readFile(String filename) throws ClassNotFoundException, IOException {
-        ObjectInputStream reader = getFileReader(filename);
-        List<Object> objects = new ArrayList<>();
-        boolean go = true;
-        while (go) {
-            try {
-                objects.add(reader.readObject());
-            } catch (EOFException e) {
-                go = false;
-            }
+    @SuppressWarnings("unchecked")
+    public List<T> readFile() throws Exception {
+        if (!isFirstTime(filename)) {
+            ObjectInputStream reader = getFileReader(filename);
+            List<T> objects = new ArrayList<>();
+            boolean go = true;
+            do {
+                try {
+                    objects.add((T) reader.readObject());
+                } catch (Exception e) {
+                    go = false;
+                }
+            } while (go);
+            reader.close();
+            return objects;
+        } else {
+            return new ArrayList<>();
         }
-
-        return objects;
     }
+
 
 }
