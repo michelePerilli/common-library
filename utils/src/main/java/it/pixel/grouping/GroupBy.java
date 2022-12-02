@@ -2,7 +2,9 @@ package it.pixel.grouping;
 
 import com.fasterxml.jackson.annotation.JsonIgnore;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 
 public class GroupBy<T> {
     @JsonIgnore
