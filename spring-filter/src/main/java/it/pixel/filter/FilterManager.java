@@ -3,14 +3,17 @@ package it.pixel.filter;
 import it.pixel.filter.annotation.OnlyNotDeleted;
 import jakarta.persistence.Column;
 import jakarta.persistence.Table;
+import lombok.extern.slf4j.Slf4j;
 import org.reflections.Reflections;
 
 import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
+import java.util.function.BinaryOperator;
 import java.util.stream.Collectors;
 
+@Slf4j
 public class FilterManager { // package-private class
 
     public enum Status {ENABLED, DISABLED}
@@ -48,7 +51,16 @@ public class FilterManager { // package-private class
 
     private static Map<String, Boolean> fetchForFilterableEntities() {
 
-        return new Reflections("it.mef").getSubTypesOf(BaseEntity.class).stream().filter(clazz -> clazz.isAnnotationPresent(Table.class)).collect(Collectors.toMap(FilterManager::getTableName, FilterManager::checkIfFilterable));
+        BinaryOperator<Boolean> whatIfDuplicatedEntityNameFound = (table1, table2) -> {
+            log.warn("duplicate table found");
+            return table1;
+        };
+
+        return new Reflections("")
+                .getSubTypesOf(BaseEntity.class)
+                .stream()
+                .filter(clazz -> clazz.isAnnotationPresent(Table.class))
+                .collect(Collectors.toMap(FilterManager::getTableName, FilterManager::checkIfFilterable, whatIfDuplicatedEntityNameFound));
     }
 
     private static <T extends BaseEntity> String getTableName(Class<T> entity) {

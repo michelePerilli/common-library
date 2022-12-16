@@ -1,14 +1,15 @@
 package it.pixel.filter;
 
 import lombok.SneakyThrows;
+import net.sf.jsqlparser.JSQLParserException;
 import net.sf.jsqlparser.expression.*;
 import net.sf.jsqlparser.expression.operators.conditional.AndExpression;
-import net.sf.jsqlparser.expression.operators.relational.EqualsTo;
-import net.sf.jsqlparser.expression.operators.relational.InExpression;
-import net.sf.jsqlparser.expression.operators.relational.IsNullExpression;
+import net.sf.jsqlparser.expression.operators.conditional.OrExpression;
+import net.sf.jsqlparser.expression.operators.relational.*;
 import net.sf.jsqlparser.parser.CCJSqlParserManager;
 import net.sf.jsqlparser.schema.Column;
 import net.sf.jsqlparser.schema.Table;
+import net.sf.jsqlparser.statement.Statement;
 import net.sf.jsqlparser.statement.select.*;
 import org.hibernate.resource.jdbc.spi.StatementInspector;
 import org.slf4j.Logger;
@@ -35,18 +36,26 @@ public class FilterStatementInspector implements StatementInspector {
     @Override
     public String inspect(String sql) {
         LOG.debug("FilterStatementInspector inspect   [IN] -> {}", sql);
-        sql = manageSQL(sql);
-        LOG.debug("FilterStatementInspector inspect  [OUT] -> {}", sql);
+        try {
+            sql = manageSQL(sql);
+            LOG.debug("FilterStatementInspector inspect  [OUT] -> {}", sql);
+        } catch (Exception e) {
+            LOG.error("FilterStatementInspector -> Something gone wrong:", e);
+        }
         return sql;
     }
 
-    @SneakyThrows // a throw of JSQLParserException will never happen because of hibernate pre-parse
+    @SneakyThrows(value = JSQLParserException.class)
+    // a throw of JSQLParserException will never happen because of hibernate pre-parse
     private String manageSQL(String sql) {
         FilterManager filterManager = FilterManager.getInstance();
         if (filterManager.getFiltersStatus() == FilterManager.Status.ENABLED) {
             CCJSqlParserManager manager = new CCJSqlParserManager();
-            PlainSelect select = (PlainSelect) ((Select) manager.parse(new StringReader(sql.toUpperCase()))).getSelectBody();
-            sql = addConditions(select).toString();
+            Statement statement = manager.parse(new StringReader(sql.toUpperCase()));
+            if (statement instanceof Select) {
+                PlainSelect select = (PlainSelect) ((Select) statement).getSelectBody();
+                sql = addConditions(select).toString();
+            }
         }
         return sql;
     }
@@ -80,15 +89,31 @@ public class FilterStatementInspector implements StatementInspector {
             checkForSubSelect(where);
         }
 
-        if (fromAlias != null) {
+        if (fromAlias != null && filterManager.getFilterableEntity().get(((Table) fromItem).getASTNode().jjtGetFirstToken().image)) {
             aliases.add(fromAlias);
         }
 
         for (String alias : aliases) {
+
+            IsNullExpression checkIsNull = new IsNullExpression();
+            checkIsNull.setLeftExpression(new Column(alias + "." + FilterManager.FIELD_FLAG_ELIMINATO));
+
             EqualsTo rightExpression = new EqualsTo();
             rightExpression.setLeftExpression(new Column(alias + "." + FilterManager.FIELD_FLAG_ELIMINATO));
             rightExpression.setRightExpression(new StringValue(FilterManager.FIELD_FLAG_ELIMINATO_VALUE));
-            where = new AndExpression(where, rightExpression);
+
+            OrExpression condition = new OrExpression();
+            condition.setLeftExpression(checkIsNull);
+            condition.setRightExpression(rightExpression);
+
+            Parenthesis container = new Parenthesis();
+            container.setExpression(condition);
+
+            if (where == null) {
+                where = container;
+            } else {
+                where = new AndExpression(where, container);
+            }
         }
 
         select.setWhere(where);
@@ -100,6 +125,10 @@ public class FilterStatementInspector implements StatementInspector {
         if (expression == null) {
             return;
         }
+        if (expression instanceof Parenthesis parenthesis) {
+            expression = parenthesis.getExpression();
+        }
+
         if (expression instanceof BinaryExpression binaryExpression) {
             Expression left = binaryExpression.getLeftExpression();
             Expression right = binaryExpression.getRightExpression();
@@ -107,9 +136,16 @@ public class FilterStatementInspector implements StatementInspector {
             checkForSubSelect(right);
         } else if (expression instanceof InExpression inExpression) {
             Expression left = inExpression.getLeftExpression();
-            Expression right = (Expression) inExpression.getRightItemsList();
             checkForSubSelect(left);
-            checkForSubSelect(right);
+            ItemsList rightItemsList = ((InExpression) expression).getRightItemsList();
+            if (rightItemsList instanceof Expression rightExpression) {
+                checkForSubSelect(rightExpression);
+            } else if (rightItemsList instanceof ExpressionList expressionList) {
+                for (Expression currentExpression : expressionList.getExpressions())
+                    checkForSubSelect(currentExpression);
+            } else {
+                LOG.debug("unknown in-expression class type");
+            }
         } else if (expression instanceof IsNullExpression isNullExpression) {
             Expression left = isNullExpression.getLeftExpression();
             checkForSubSelect(left);
@@ -117,8 +153,8 @@ public class FilterStatementInspector implements StatementInspector {
             List<Expression> left = function.getParameters().getExpressions();
             for (Expression param : left)
                 checkForSubSelect(param);
-        } else if (expression instanceof SubSelect subSelect) {
-            addConditions((PlainSelect) subSelect.getSelectBody());
+        } else if (expression instanceof SubSelect) {
+            addConditions((PlainSelect) ((SubSelect) expression).getSelectBody());
         }
     }
 
