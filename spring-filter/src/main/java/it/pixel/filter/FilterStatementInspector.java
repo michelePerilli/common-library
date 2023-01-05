@@ -137,7 +137,7 @@ public class FilterStatementInspector implements StatementInspector {
         } else if (expression instanceof InExpression inExpression) {
             Expression left = inExpression.getLeftExpression();
             checkForSubSelect(left);
-            ItemsList rightItemsList = ((InExpression) expression).getRightItemsList();
+            ItemsList rightItemsList = inExpression.getRightItemsList();
             if (rightItemsList instanceof Expression rightExpression) {
                 checkForSubSelect(rightExpression);
             } else if (rightItemsList instanceof ExpressionList expressionList) {

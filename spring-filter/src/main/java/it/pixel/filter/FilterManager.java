@@ -71,7 +71,9 @@ public class FilterManager { // package-private class
 
         boolean hasCorrectAnnotation = entity.isAnnotationPresent(OnlyNotDeleted.class);
 
-        boolean hasCorrectColumn = Arrays.stream(entity.getDeclaredFields()).filter(x -> x.isAnnotationPresent(Column.class)).anyMatch(x -> Objects.equals(x.getAnnotation(Column.class).name(), FIELD_FLAG_ELIMINATO));
+        boolean hasCorrectColumn = Arrays.stream(entity.getDeclaredFields())
+                .filter(x -> x.isAnnotationPresent(Column.class))
+                .anyMatch(x -> Objects.equals(x.getAnnotation(Column.class).name(), FIELD_FLAG_ELIMINATO));
 
         return hasCorrectAnnotation && hasCorrectColumn;
     }

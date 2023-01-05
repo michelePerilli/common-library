@@ -1,5 +1,13 @@
 package it.pixel.vectors;
 
+import lombok.AllArgsConstructor;
+
 import java.io.Serializable;
 
-public record Vector3i(int x, int y, int z) implements Serializable {}
+@AllArgsConstructor
+
+public class Vector3i implements Serializable {
+    public int x;
+    public int y;
+    public int z;
+}

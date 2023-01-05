@@ -1,5 +1,11 @@
 package it.pixel.vectors;
 
+import lombok.AllArgsConstructor;
+
 import java.io.Serializable;
 
-public record Vector2f(float x, float y) implements Serializable {}
+@AllArgsConstructor
+public class Vector2f implements Serializable {
+    public float x;
+    public float y;
+}

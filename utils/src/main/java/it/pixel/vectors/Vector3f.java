@@ -1,5 +1,13 @@
 package it.pixel.vectors;
 
+import lombok.AllArgsConstructor;
+
 import java.io.Serializable;
 
-public record Vector3f(float x, float y, float z) implements Serializable {}
+@AllArgsConstructor
+
+public class Vector3f implements Serializable {
+    public float x;
+    public float y;
+    public float z;
+}
