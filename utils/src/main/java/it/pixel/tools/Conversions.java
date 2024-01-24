@@ -56,6 +56,7 @@ public class Conversions {
      * @param item the item
      * @return the list
      */
+    @Deprecated
     public static <T> List<T> singleItemList(T item) {
         return new ArrayList<>(List.of(item));
     }

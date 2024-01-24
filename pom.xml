@@ -7,6 +7,9 @@
     <groupId>it.pixel</groupId>
     <artifactId>pixel-root</artifactId>
     <packaging>pom</packaging>
-    <version>1.0.0</version>
-
+    <version>1.0.1</version>
+    <modules>
+        <module>utils</module>
+        <module>spring-filter</module>
+    </modules>
 </project>
